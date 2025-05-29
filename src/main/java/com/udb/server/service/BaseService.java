@@ -9,6 +9,7 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.udb.server.bodies.ExeSqlBody;
+import com.udb.server.bodies.Result;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 /**
@@ -152,25 +153,24 @@ public class BaseService {
      * @return id
      */
 
-    public static String exec(ExeSqlBody body) {
+    public static Result exec(ExeSqlBody body) {
         // If the number of tasks is greater than 10, return an error message
         if (threadPoolTaskMap.size() >= 10) {
-            return "{\"status\":\"fail\",\"message\":\"Too many tasks\",\"startTime\":null,\"endTime\":null}";
+            return new Result().fail("Too many tasks");
 
         }
         String id = UUID.randomUUID().toString();
         ExecThread thread = new ExecThread(id, body.getSql(), body.getDatasource(), body.isTransaction());
         threadPoolTaskMap.put(id, thread);
         thread.start();
-        return "{\"status\":\"success\",\"message\":\"success\",\"startTime\":\"" + thread.getStartTime()
-                + "\",\"endTime\":\"" + thread.getEndTime() + "\",\"id\":\"" + id + "\"}";
+        return new Result().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime()).running("Executing");
     }
     /**
      * This method returns a list of tasks.
      * 
      * @return
      */
-    public static Object getTasks() {
+    public static Result getTasks() {
         JSONArray tasks = new JSONArray();
         for (Map.Entry<String, ExecThread> entry : threadPoolTaskMap.entrySet()) {
             JSONObject task = new JSONObject();
@@ -182,7 +182,7 @@ public class BaseService {
             task.put("lable", entry.getValue().getLable());
             tasks.add(task);
         }
-        return tasks;
+        return new Result().data(tasks);
     }
 
     /**
@@ -192,15 +192,10 @@ public class BaseService {
      * @param id
      * @return
      */
-    public static Object getResult(String id) {
+    public static Result getResult(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
-        Map<String, Object> rs = new java.util.HashMap<>();
-        rs.put("id", id);
-        rs.put("status", "fail");
-        rs.put("message", "Error");
         if (thread == null) {
-            rs.put("message", "Task does not exist");
-            return rs;
+            return new Result().data(id).fail("Task does not exist");
         }
         // Add the results
         String results = "[";
@@ -214,21 +209,16 @@ public class BaseService {
             results = results.substring(0, results.length() - 1);
         }
         results += "]";
-        rs.put("results", results);
+      
         // Add the error message
         if (thread.getEndTime() == null) {
-            rs.put("startTime", thread.getStartTime());
-            rs.put("status", "executing");
-            rs.put("message", "Executing");
-            return rs;
+            return new Result().data(results).startTime(thread.getStartTime()).id(id).running("Executing");
         } else {
+            Result rs=new Result().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime()).id(id);
             if (thread.isSuccess()) {
-                rs.put("status", "success");
-                rs.put("message", "success");
-
+                rs.success("success");
             } else {
-                rs.put("status", "fail");
-                rs.put("message", thread.getErrorMessage());
+                rs.fail(thread.getErrorMessage());
             }
             if(!thread.isTransaction()||thread.isCommitOrRollback()){
                 // Close the connection
@@ -243,15 +233,12 @@ public class BaseService {
      * @param id
      * @return
      */
-    public static Object stop(String id) {
-        Map<String, Object> rs = new java.util.HashMap<>();
-        rs.put("id", id);
-        rs.put("status", "fail");
-        rs.put("message", "Error");
+    public static Result stop(String id) {
+
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            rs.put("message", "Task does not exist");
-            return rs;
+         
+            return new Result().data(id).fail("Task does not exist");
         }
         return thread.end();
 
@@ -261,18 +248,18 @@ public class BaseService {
      * @param id
      * @return
      */
-    public static Object commit(String id) {
+    public static Result commit(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            return "{\"status\":\"fail\",\"message\":\"Task does not exist\"}";
+            return new Result().data(id).fail("Task does not exist");
         }
         try {
             thread.commit();
             thread.end();
             threadPoolTaskMap.remove(id);
-            return "{\"status\":\"success\",\"message\":\"Commit success\"}";
+            return new Result().data(id).success("Commit success");
         } catch (Exception e) {
-            return "{\"status\":\"fail\",\"message\":\"" + e.getMessage() + "\"}";
+            return new Result().data(id).fail(e.getMessage());
         }
 
     }
@@ -282,18 +269,18 @@ public class BaseService {
      * @param id
      * @return
      */
-    public static Object rollback(String id) {
+    public static Result rollback(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            return "{\"status\":\"fail\",\"message\":\"Task does not exist\"}";
+            return new Result().data(id).fail("Task does not exist");
         }
         try {
             thread.rollback();
             thread.end();
             threadPoolTaskMap.remove(id);
-            return "{\"status\":\"success\",\"message\":\"Rollback success\"}";
+            return new Result().data(id).success("Rollback success");
         } catch (Exception e) {
-            return "{\"status\":\"fail\",\"message\":\"" + e.getMessage() + "\"}";
+            return new Result().data(id).fail(e.getMessage());
         }
 
     }

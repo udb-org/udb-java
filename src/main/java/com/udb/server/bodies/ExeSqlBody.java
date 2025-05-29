@@ -29,10 +29,5 @@ public class ExeSqlBody {
     }
     public void setId(String id) {
         this.id = id;
-    }
-    
-    
-   
-    
-    
+    } 
 }

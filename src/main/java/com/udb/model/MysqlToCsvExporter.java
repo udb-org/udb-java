@@ -27,9 +27,7 @@ public class MysqlToCsvExporter {
      */
     public static void exportToCsv(String args,String path) throws IOException {
        System.out.println("Export data to CSV file:"+args);
-        JSONArray argsJson = JSONArray.parseArray(args);
-     
-      
+        JSONArray argsJson = JSONArray.parseArray(args); 
         for (int d = 0; d < argsJson.size(); d++) {
             String databaseName = argsJson.getJSONObject(d).getString("database");
             HikariDataSource dataSource = BaseService.getDataSource(databaseName);
@@ -95,7 +93,4 @@ public class MysqlToCsvExporter {
         }
         return escaped;
     }
-
- 
-
 }

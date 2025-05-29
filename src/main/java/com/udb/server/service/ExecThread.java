@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.udb.server.bodies.Result;
 import com.zaxxer.hikari.HikariDataSource;
 /**
  * This class extends the Thread class and is used to execute SQL statements in a separate thread.
@@ -107,21 +108,21 @@ public class ExecThread extends Thread {
         conn.rollback();
     }
 
-    public Object end() {
+    public Result end() {
         // Forcefully end the connection and close the resources
         try {
             if (conn != null) {
                 if(isTransaction&&!isCommitOrRollback){
-                    return "{\"status\":\"fail\",\"message\":\"" + "Transaction has been rollback or commited" + "\"}";
-                }
+                    return new Result().fail("Transaction has been rollback or commited");
+                 }
                 conn.close();
             }
             this.interrupt();
-            return "{\"status\":\"success\",\"message\":\"Task has been terminated\"}";
+            return new Result().success("Task has been terminated");
         } catch (SQLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            return "{\"status\":\"fail\",\"message\":\"" + e.getMessage() + "\"}";
+            return new Result().fail(e.getMessage());
         }
     }
 

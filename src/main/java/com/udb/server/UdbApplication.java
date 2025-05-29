@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class UdbApplication {
 	public static void main(String[] args) {
-		//set the port to 8080 if no port is specified
+		//set the port to 10001 if no port is specified
 		if(args.length > 0){
 			String port = args[0];
 			System.setProperty("server.port", port);
