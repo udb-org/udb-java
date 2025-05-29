@@ -8,6 +8,7 @@ import com.udb.server.bodies.ExportDataBody;
 import com.udb.server.bodies.Result;
 import com.udb.server.bodies.TaskBody;
 import com.alibaba.fastjson2.JSON;
+import com.udb.server.bodies.DumpDatabaseBody;
 import com.udb.server.bodies.ExeSqlBody;
 import com.udb.server.service.BaseService;
 import com.udb.model.MysqlToCsvExporter;
@@ -128,7 +129,7 @@ public class BaseController {
 
     @RequestMapping("/exportData")
     @ResponseBody
-    public Result dumpData(@RequestBody ExportDataBody body) {
+    public Result exportData(@RequestBody ExportDataBody body) {
         System.out.println(JSON.toJSONString(body));
         try {
             if (body.getFormat().equals("csv")) {
@@ -145,4 +146,27 @@ public class BaseController {
             return new Result().fail(e.getMessage());
         }
     }
+
+    @RequestMapping("/dump")
+    @ResponseBody
+    public Result dumpDatabase(@RequestBody DumpDatabaseBody body) {
+        System.out.println(JSON.toJSONString(body));
+        try {
+            return BaseService.dumpDatabase(body.getDatasource(), body.getPath(), body.getTables(), body.getDumpType());
+           
+        } catch (Exception e) {
+            return new Result().fail(e.getMessage());
+        }
+    }
+    @RequestMapping("/dump_stop")
+    @ResponseBody
+    public Result stopDump(@RequestBody TaskBody body) {
+        return BaseService.stopDump(body.getId());
+    }
+    @ResponseBody
+    @RequestMapping("/dump_result")
+    public Result getDumpResult(@RequestBody TaskBody body) {
+        return BaseService.getDumpResult(body.getId());
+    }
+
 }

@@ -351,4 +351,57 @@ public class BaseService {
         }
 
     }
+
+
+    private static Map<String, DumpThread> dumpThreadMap = new java.util.HashMap<>();
+
+
+    public static Result dumpDatabase(String datasource, String path, String tables, String dumpType) throws Exception  {
+        String key = UUID.randomUUID().toString();
+        if (dumpThreadMap.containsKey(key)) {
+            return new Result().fail("Dump is running");
+        }
+        DumpThread thread = new DumpThread(key, tables, dumpType, path, datasource);
+        dumpThreadMap.put(key, thread);
+        thread.start();
+        return new Result().id(key).startTime(thread.getStartTime()).success("Dumping");
+    }
+    public static Result getDumpResult(String id) {
+        DumpThread thread = dumpThreadMap.get(id);
+        if (thread == null) {
+            return new Result().id(id).fail("Task does not exist");
+        }
+        // Add the results
+        String results = "[";
+        if (thread.getResults() != null && thread.getResults().size() > 0) {
+            while (thread.getResults().size() > 0) {
+                String result = thread.getResults().poll();
+                results += "\""+result + "\",";
+            }
+        }
+        results += "]";
+      
+        // Add the error message
+        if (thread.getEndTime() == null) {
+            return new Result().data(results).startTime(thread.getStartTime()).id(id).running("Executing");
+        } else {
+            Result rs=new Result().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime()).id(id);
+            if (thread.isSuccess()) {
+                rs.success("success");
+            } else {
+                rs.fail(thread.getErrorMessage());
+            }
+            thread.end();
+            dumpThreadMap.remove(id);
+            return rs;
+        }
+    }
+
+    public static Result stopDump(String id) {
+        DumpThread thread = dumpThreadMap.get(id);
+        if (thread == null) {
+            return new Result().data(id).fail("Task does not exist");
+        }
+        return thread.end();
+    }
 }
