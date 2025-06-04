@@ -17,20 +17,63 @@ import java.util.Date;
  * 
  */
 public class Result {
-    private String status;
-    private String message;
+    private int status;
     private Object data;
     private Date startTime;
     private Date endTime;
     private String id;
+    private String message;
+
+    public static Result success() {
+        Result result = new Result(200);
+        return result;
+    }
+    public static Result success(Object data) {
+        Result result = new Result(200);
+        result.data = data;
+        return result;
+    }
+    public static Result error(String message) {
+        Result result = new Result(500);
+        result.message = message;
+        return result;
+    }
+    public static Result running() {
+        Result result = new Result(800);
+        return result;
+    }
+  
+    public Result(int status) {
+        this.status = status;
+        
+    }
+    public Result data(Object data) {
+        this.data = data;
+        return this;
+    }
+    public Result startTime(Date startTime) {
+        this.startTime = startTime;
+        return this;
+    }
+    public Result endTime(Date endTime) {
+        this.endTime = endTime;
+        return this;
+    }
+    public Result id(String id) {
+        this.id = id;
+        return this;
+    }
+    public Result message(String message) {
+        this.message = message;
+        return this;
+    }
+
+
     public String getId() {
         return id;
     }
     public void setId(String id) {
         this.id = id;
-    }
-    
-    public Result() {
     }
     
     public Date getStartTime() {
@@ -51,11 +94,12 @@ public class Result {
     public void setData(Object data) {
         this.data = data;
     }
+    
 
-    public String getStatus() {
+    public int getStatus() {
         return status;
     }
-    public void setStatus(String status) {
+    public void setStatus(int status) {
         this.status = status;
     }
     public String getMessage() {
@@ -63,42 +107,5 @@ public class Result {
     }
     public void setMessage(String message) {
         this.message = message;
-    }
-    public Result(String status, String message) {
-        this.status = status;
-        this.message = message;
-    }
-
-    public  Result success(String message) {
-        this.status = "success";
-        this.message = message;
-        return this;
-    }
-    public  Result data(Object data) {
-        this.status = "success";
-        this.data = data;
-        return this;
-    }
-    public  Result fail(String message) {
-        this.status = "fail";
-        this.message = message;
-        return this;
-    }
-    public  Result running(String message) {
-        this.status = "running";
-        this.message = message;
-        return this;
-    }
-    public Result startTime(Date startTime) {
-        this.startTime = startTime;
-        return this;
-    }
-    public Result endTime(Date endTime) {
-        this.endTime = endTime;
-        return this;
-    }
-    public Result id(String id) {
-        this.id = id;
-        return this;
     }
 }

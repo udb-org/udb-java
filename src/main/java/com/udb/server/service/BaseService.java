@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -12,6 +13,7 @@ import com.udb.server.bodies.ExeSqlBody;
 import com.udb.server.bodies.Result;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
 /**
  * 
  * BaseService
@@ -19,7 +21,8 @@ import com.zaxxer.hikari.HikariDataSource;
  * It provides various methods for database connection management,
  * SQL execution, and task management.
  * 
- * It supports multiple database types such as MySQL, Oracle, SQL Server, and PostgreSQL.
+ * It supports multiple database types such as MySQL, Oracle, SQL Server, and
+ * PostgreSQL.
  * It uses HikariCP for connection pooling and FastJSON2 for JSON processing.
  *
  * 
@@ -93,7 +96,8 @@ public class BaseService {
         config.setUsername(username);
         config.setPassword(password);
         config.setDriverClassName(driver);
-        // set the connection to expire after 1000 minutes, and clean up expired connections
+        // set the connection to expire after 1000 minutes, and clean up expired
+        // connections
         config.setMaxLifetime(1000 * 60);
         config.setIdleTimeout(1000 * 60);
         // set the minimum number of connections to 2
@@ -105,6 +109,7 @@ public class BaseService {
         dataSourceMap.put(key, ds);
         return ds;
     }
+
     /**
      * This method returns a list of data sources.
      * 
@@ -123,6 +128,7 @@ public class BaseService {
         }
         return dataSources;
     }
+
     /**
      * This method returns a data source.
      * 
@@ -147,7 +153,8 @@ public class BaseService {
 
     /**
      * This method executes SQL statements.
-     * It returns a JSON object that contains the execution status, start time, end time, and results.
+     * It returns a JSON object that contains the execution status, start time, end
+     * time, and results.
      * 
      * @param body
      * @return id
@@ -156,15 +163,15 @@ public class BaseService {
     public static Result exec(ExeSqlBody body) {
         // If the number of tasks is greater than 10, return an error message
         if (threadPoolTaskMap.size() >= 10) {
-            return new Result().fail("Too many tasks");
-
+            return new Result(100).message("Too many tasks");
         }
         String id = UUID.randomUUID().toString();
         ExecThread thread = new ExecThread(id, body.getSql(), body.getDatasource(), body.isTransaction());
         threadPoolTaskMap.put(id, thread);
         thread.start();
-        return new Result().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime()).running("Executing");
+        return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
     }
+
     /**
      * This method returns a list of tasks.
      * 
@@ -176,18 +183,19 @@ public class BaseService {
             JSONObject task = new JSONObject();
             task.put("id", entry.getKey());
             task.put("startTime", entry.getValue().getStartTime());
-            task.put("isSuccess", entry.getValue().isSuccess());
+            task.put("status", entry.getValue().getStatus());
             task.put("endTime", entry.getValue().getEndTime());
             task.put("errorMessage", entry.getValue().getErrorMessage());
             task.put("lable", entry.getValue().getLable());
             tasks.add(task);
         }
-        return new Result().data(tasks);
+        return Result.success(tasks);
     }
 
     /**
      * This method returns the result of a task.
-     * It returns a JSON object that contains the execution status, start time, end time, and results.
+     * It returns a JSON object that contains the execution status, start time, end
+     * time, and results.
      * 
      * @param id
      * @return
@@ -195,7 +203,7 @@ public class BaseService {
     public static Result getResult(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            return new Result().data(id).fail("Task does not exist");
+            return new Result(820).message("Task does not exist");
         }
         // Add the results
         String results = "[";
@@ -209,18 +217,19 @@ public class BaseService {
             results = results.substring(0, results.length() - 1);
         }
         results += "]";
-      
+
         // Add the error message
         if (thread.getEndTime() == null) {
-            return new Result().data(results).startTime(thread.getStartTime()).id(id).running("Executing");
+
+            return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
         } else {
-            Result rs=new Result().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime()).id(id);
-            if (thread.isSuccess()) {
-                rs.success("success");
-            } else {
-                rs.fail(thread.getErrorMessage());
+            Result rs = Result.success().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime())
+                    .id(id);
+            if (thread.getStatus() != 200) {
+                rs.setStatus(thread.getStatus());
+                rs.setMessage(thread.getErrorMessage());
             }
-            if(!thread.isTransaction()||thread.isCommitOrRollback()){
+            if (!thread.isTransaction() || thread.isCommitOrRollback()) {
                 // Close the connection
                 thread.end();
                 threadPoolTaskMap.remove(id);
@@ -228,41 +237,46 @@ public class BaseService {
             return rs;
         }
     }
+
     /**
      * This method stops a task.
+     * 
      * @param id
      * @return
      */
     public static Result stop(String id) {
-
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-         
-            return new Result().data(id).fail("Task does not exist");
+            return new Result(820).message("Task does not exist");
         }
         return thread.end();
-
     }
+
     /**
      * This method commits a task.
+     * 
      * @param id
      * @return
      */
     public static Result commit(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            return new Result().data(id).fail("Task does not exist");
+
+            return new Result(820).message("Task does not exist");
         }
         try {
             thread.commit();
             thread.end();
             threadPoolTaskMap.remove(id);
-            return new Result().data(id).success("Commit success");
+
+            return Result.success().id(id).message("Commit success");
         } catch (Exception e) {
-            return new Result().data(id).fail(e.getMessage());
+
+            return Result.error(e.getMessage()).id(id);
         }
 
     }
+
     /**
      * This method rolls back a task.
      *
@@ -272,31 +286,36 @@ public class BaseService {
     public static Result rollback(String id) {
         ExecThread thread = threadPoolTaskMap.get(id);
         if (thread == null) {
-            return new Result().data(id).fail("Task does not exist");
+
+            return new Result(820).message("Task does not exist");
         }
         try {
             thread.rollback();
             thread.end();
             threadPoolTaskMap.remove(id);
-            return new Result().data(id).success("Rollback success");
+
+            return Result.success().id(id).message("Rollback success");
         } catch (Exception e) {
-            return new Result().data(id).fail(e.getMessage());
+
+            return Result.error(e.getMessage()).id(id);
         }
 
     }
+
     /**
      * This method executes SQL statements.
-     * It returns a JSON object that contains the execution status, start time, end time, and results.
+     * It returns a JSON object that contains the execution status, start time, end
+     * time, and results.
      * 
      * @param body
      * @return
      * @throws Exception
      */
-    public static Object executeSql(ExeSqlBody body) throws Exception {
+    public static Result executeSql(ExeSqlBody body) throws Exception {
         JSONObject datasourceJson = JSONObject.parseObject(body.getDatasource());
         HikariDataSource dataSource = getDataSource(datasourceJson);
         if (dataSource == null) {
-            throw new Exception("Data source does not exist");
+            return new Result(830).message("Data source does not exist");
         }
         Connection conn = null;
         try {
@@ -337,7 +356,7 @@ public class BaseService {
             Map<String, Object> result = new java.util.HashMap<>();
             result.put("columns", columns);
             result.put("data", data);
-            return result;
+            return Result.success(result);
         } catch (Exception e) {
             if (conn != null) {
                 try {
@@ -347,49 +366,49 @@ public class BaseService {
                     e1.printStackTrace();
                 }
             }
-            throw e;
+            e.printStackTrace();
+            return Result.error(e.getMessage());
         }
 
     }
 
-
     private static Map<String, DumpThread> dumpThreadMap = new java.util.HashMap<>();
 
-
-    public static Result dumpDatabase(String datasource, String path, String tables, String dumpType) throws Exception  {
+    public static Result dumpDatabase(String datasource, String path, String tables, String dumpType) throws Exception {
         String key = UUID.randomUUID().toString();
         if (dumpThreadMap.containsKey(key)) {
-            return new Result().fail("Dump is running");
+            return new Result(840).message("Dump is running");
         }
         DumpThread thread = new DumpThread(key, tables, dumpType, path, datasource);
         dumpThreadMap.put(key, thread);
         thread.start();
-        return new Result().id(key).startTime(thread.getStartTime()).success("Dumping");
+        return Result.running().id(key).startTime(thread.getStartTime()).message("Dumping");
     }
+
     public static Result getDumpResult(String id) {
         DumpThread thread = dumpThreadMap.get(id);
         if (thread == null) {
-            return new Result().id(id).fail("Task does not exist");
+
+            return new Result(820).message("Task does not exist");
         }
         // Add the results
         String results = "[";
         if (thread.getResults() != null && thread.getResults().size() > 0) {
             while (thread.getResults().size() > 0) {
                 String result = thread.getResults().poll();
-                results += "\""+result + "\",";
+                results += "\"" + result + "\",";
             }
         }
         results += "]";
-      
+
         // Add the error message
         if (thread.getEndTime() == null) {
-            return new Result().data(results).startTime(thread.getStartTime()).id(id).running("Executing");
+            return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
         } else {
-            Result rs=new Result().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime()).id(id);
-            if (thread.isSuccess()) {
-                rs.success("success");
-            } else {
-                rs.fail(thread.getErrorMessage());
+            Result rs = Result.success().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime())
+                    .id(id);
+            if (thread.getStatus() != 200) {
+                rs.setStatus(thread.getStatus());
             }
             thread.end();
             dumpThreadMap.remove(id);
@@ -400,7 +419,7 @@ public class BaseService {
     public static Result stopDump(String id) {
         DumpThread thread = dumpThreadMap.get(id);
         if (thread == null) {
-            return new Result().data(id).fail("Task does not exist");
+            return new Result(820).message("Task does not exist");
         }
         return thread.end();
     }

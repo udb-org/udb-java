@@ -11,55 +11,76 @@ import java.util.concurrent.BlockingQueue;
 import com.alibaba.fastjson2.JSONObject;
 import com.udb.server.bodies.Result;
 import com.zaxxer.hikari.HikariDataSource;
+
 /**
- * This class extends the Thread class and is used to execute SQL statements in a separate thread.
- * It provides methods for managing the execution of SQL statements, including starting, ending, and committing/rolling back transactions.
- * It also provides methods for managing the execution of SQL statements in a transaction.
+ * This class extends the Thread class and is used to execute SQL statements in
+ * a separate thread.
+ * It provides methods for managing the execution of SQL statements, including
+ * starting, ending, and committing/rolling back transactions.
+ * It also provides methods for managing the execution of SQL statements in a
+ * transaction.
  * It uses HikariCP for connection pooling and FastJSON2 for JSON processing.
  */
 public class ExecThread extends Thread {
+    private int status;
     private String sessionId;
     private String sql;
     private String datasource;
     private boolean isTransaction;
-    //Is it executed commit or rollback
+    // Is it executed commit or rollback
     private boolean isCommitOrRollback;
+
     public ExecThread(String sessionId, String sql, String datasource, boolean isTransaction) {
         this.sessionId = sessionId;
         this.sql = sql;
         this.datasource = datasource;
         this.isTransaction = isTransaction;
     }
+
+    public int getStatus() {
+        return status;
+    }
+
     public boolean isCommitOrRollback() {
         return isCommitOrRollback;
     }
+
     public String getLable() {
         if (sql.length() > 30) {
             return sql.substring(0, 30) + "...";
         }
         return sql;
     }
+
     public String getSessionId() {
         return sessionId;
     }
+
     public String getSql() {
         return sql;
     }
+
     public String getDatasource() {
         return datasource;
     }
+
     public boolean isTransaction() {
         return isTransaction;
     }
+
     private Connection conn;
     private Statement stmt;
+
     public Connection getConn() {
         return conn;
     }
+
     public Statement getStmt() {
         return stmt;
     }
+
     private BlockingQueue<Map<String, Object>> results;
+
     /**
      * Get the results.
      * 
@@ -67,15 +88,6 @@ public class ExecThread extends Thread {
      */
     public BlockingQueue<Map<String, Object>> getResults() {
         return results;
-    }
-    private boolean isSuccess;
-    /**
-     * Is it successful?
-     * 
-     * @return
-     */
-    public boolean isSuccess() {
-        return isSuccess;
     }
 
     private String errorMessage;
@@ -99,12 +111,14 @@ public class ExecThread extends Thread {
     public Date getEndTime() {
         return endTime;
     }
-    public void commit() throws SQLException{
-        isCommitOrRollback=true;
+
+    public void commit() throws SQLException {
+        isCommitOrRollback = true;
         conn.commit();
     }
-    public void rollback()throws SQLException{
-        isCommitOrRollback=true;
+
+    public void rollback() throws SQLException {
+        isCommitOrRollback = true;
         conn.rollback();
     }
 
@@ -112,17 +126,23 @@ public class ExecThread extends Thread {
         // Forcefully end the connection and close the resources
         try {
             if (conn != null) {
-                if(isTransaction&&!isCommitOrRollback){
-                    return new Result().fail("Transaction has been rollback or commited");
-                 }
+                if (isTransaction && !isCommitOrRollback) {
+
+                    status = 850;
+                    errorMessage = "Transaction has been rollback or commited";
+                    return new Result(850).message("Transaction has been rollback or commited");
+                }
                 conn.close();
             }
             this.interrupt();
-            return new Result().success("Task has been terminated");
+            status = 200;
+            return Result.success().message("Task has been terminated");
         } catch (SQLException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-            return new Result().fail(e.getMessage());
+            status = 500;
+            errorMessage = e.getMessage();
+            return Result.error(e.getMessage());
         }
     }
 
@@ -137,8 +157,8 @@ public class ExecThread extends Thread {
             if (dataSource == null) {
                 System.out.println("datasource does not exist");
                 errorMessage = "datasource does not exist";
-                isSuccess = false;
                 endTime = new java.util.Date();
+                status=830;
                 return;
 
             }
@@ -151,21 +171,21 @@ public class ExecThread extends Thread {
             }
             // Execute query statements
             if (sqls.length > 0) {
-                if(results==null){
+                if (results == null) {
                     results = new java.util.concurrent.ArrayBlockingQueue<>(sqls.length);
                 }
-                for(int i=0;i<sqls.length;i++){
+                for (int i = 0; i < sqls.length; i++) {
                     String sql = sqls[i];
                     query(sql, i);
                 }
             }
-             endTime = new java.util.Date();
-             System.out.println("Execute success");
-             
+            endTime = new java.util.Date();
+            System.out.println("Execute success");
+
             // if(isTransaction){
-            //     conn.commit();
+            // conn.commit();
             // }
-            isSuccess = true;
+            status = 200;
         } catch (Exception e) {
             try {
                 if (conn != null) {
@@ -174,14 +194,15 @@ public class ExecThread extends Thread {
                     }
                 }
             } catch (SQLException e1) {
-                // TODO Auto-generated catch block
                 e1.printStackTrace();
             }
             e.printStackTrace();
             errorMessage = e.getMessage();
             endTime = new java.util.Date();
+            status=500;
         }
     }
+
     /**
      * Execute query statements.
      *
@@ -191,7 +212,7 @@ public class ExecThread extends Thread {
      */
     private void query(String sql, long index) throws Exception {
         try {
-         System.out.println("Execute sql:"+sql);
+            System.out.println("Execute sql:" + sql);
             java.sql.Statement stmt = conn.createStatement();
             boolean isResult = stmt.execute(sql);
             java.util.List<Map<String, Object>> columns = new java.util.ArrayList<>();

@@ -36,11 +36,11 @@ public class BaseController {
     @ResponseBody
     public Result getDataSources() {
         try {
-            return new Result().data(BaseService.getDataSources());
+            return Result.success(BaseService.getDataSources());
         } catch (Exception e) {
-            // TODO: handle exception
-        }
-        return new Result().fail("Get data source failed");
+            //Get data source failed
+            return Result.error(e.getMessage());
+        }       
     }
 
     /**
@@ -121,9 +121,9 @@ public class BaseController {
     public Result execSql(@RequestBody ExeSqlBody body) {
         System.out.println(body.getSql());
         try {
-            return new Result().data(BaseService.executeSql(body));
+            return BaseService.executeSql(body);
         } catch (Exception e) {
-            return new Result().fail(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
 
@@ -141,9 +141,9 @@ public class BaseController {
             } else if (body.getFormat().equals("sql")) {
                 MysqlToSqlExporter.exportToSql(body.getData(), body.getPath());
             }
-            return new Result().success("success");
+            return Result.success("success");
         } catch (Exception e) {
-            return new Result().fail(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
 
@@ -155,7 +155,7 @@ public class BaseController {
             return BaseService.dumpDatabase(body.getDatasource(), body.getPath(), body.getTables(), body.getDumpType());
            
         } catch (Exception e) {
-            return new Result().fail(e.getMessage());
+            return Result.error(e.getMessage());
         }
     }
     @RequestMapping("/dump_stop")

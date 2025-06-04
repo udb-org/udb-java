@@ -24,6 +24,7 @@ import com.zaxxer.hikari.HikariDataSource;
  * It uses HikariCP for connection pooling and FastJSON2 for JSON processing.
  */
 public class DumpThread extends Thread {
+    private int status;
     private String sessionId;
     private String tables;
     private String dumpType;
@@ -45,6 +46,9 @@ public class DumpThread extends Thread {
         this.path = path;
         this.datasource = datasource;
 
+    }
+    public int getStatus() {
+        return status;
     }
 
     public String getSessionId() {
@@ -77,16 +81,6 @@ public class DumpThread extends Thread {
         return results;
     }
 
-    private boolean isSuccess;
-
-    /**
-     * Is it successful?
-     * 
-     * @return
-     */
-    public boolean isSuccess() {
-        return isSuccess;
-    }
 
     private String errorMessage;
 
@@ -117,11 +111,13 @@ public class DumpThread extends Thread {
                 conn.close();
             }
             this.interrupt();
-            return new Result().success("Task has been terminated");
+          
+            return Result.success().message("Task has been terminated");
         } catch (SQLException e) {
-            // TODO Auto-generated catch block
+          
             e.printStackTrace();
-            return new Result().fail(e.getMessage());
+         
+            return Result.error(e.getMessage());
         }
     }
 
@@ -137,8 +133,9 @@ public class DumpThread extends Thread {
             if (dataSource == null) {
                 System.out.println("datasource does not exist");
                 errorMessage = "datasource does not exist";
-                isSuccess = false;
+           
                 endTime = new java.util.Date();
+                status=830;
                 return;
 
             }
@@ -158,7 +155,8 @@ public class DumpThread extends Thread {
             fileWriter.close();
             endTime = new java.util.Date();
             System.out.println("Execute success");
-            isSuccess = true;
+         
+            status=200;
         } catch (Exception e) {
             if (fileWriter != null) {
                 try {
@@ -177,6 +175,7 @@ public class DumpThread extends Thread {
             e.printStackTrace();
             errorMessage = e.getMessage();
             endTime = new java.util.Date();
+            status=500;
         }
     }
 
