@@ -323,7 +323,7 @@ public class BaseService {
             java.sql.Statement stmt = conn.createStatement();
             boolean isResult = stmt.execute(body.getSql());
             java.util.List<Map<String, Object>> columns = new java.util.ArrayList<>();
-            java.util.List<Map<String, Object>> data = new java.util.ArrayList<>();
+            java.util.List<Map<String, Object>> rows = new java.util.ArrayList<>();
             if (isResult) {
                 java.sql.ResultSet rs = stmt.getResultSet();
                 // Get the column information
@@ -342,20 +342,20 @@ public class BaseService {
                     for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
                         row.put(rs.getMetaData().getColumnName(i), rs.getObject(i));
                     }
-                    data.add(row);
+                    rows.add(row);
                 }
                 rs.close();
             } else {
                 long updateCount = stmt.getLargeUpdateCount();
                 Map<String, Object> row = new java.util.HashMap<>();
                 row.put("updateCount", updateCount);
-                data.add(row);
+                rows.add(row);
             }
             stmt.close();
             conn.close();
             Map<String, Object> result = new java.util.HashMap<>();
             result.put("columns", columns);
-            result.put("data", data);
+            result.put("rows", rows);
             return Result.success(result);
         } catch (Exception e) {
             if (conn != null) {
