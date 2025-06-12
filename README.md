@@ -38,3 +38,6 @@ Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTIN
 ## License
 This project is licensed under the [LICENSE](LICENSE) file.
 
+
+
+java -cp "udb-java-0.0.2:udb-java-0.0.2/BOOT-INF/classes:udb-java-0.0.2/BOOT-INF/lib/*:/Users/taoyongwen/.udb/server/driver/com/mysql/mysql-connector-j/9.3.0/mysql-connector-j-9.3.0.jar" com.udb.server.UdbApplication   

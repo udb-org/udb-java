@@ -10,12 +10,21 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 public class UdbApplication {
+	/**
+	 * 
+	 *  java -cp "udb-java-0.0.2:udb-java-0.0.2/BOOT-INF/classes:udb-java-0.0.2/BOOT-INF/lib/*:/Users/taoyongwen/.udb/server/driver/com/mysql/mysql-connector-j/9.3.0/mysql-connector-j-9.3.0.jar"
+	 *  com.udb.server.UdbApplication 
+	 *   10001 "mysql(2,3)"
+	 * 
+	 * @param args
+	 */
 	public static void main(String[] args) {
-		//set the port to 10001 if no port is specified
-		if(args.length > 0){
-			String port = args[0];
-			System.setProperty("server.port", port);
+		if(args.length!=2){
+			return ;
 		}
+		String port = args[0];
+		System.setProperty("server.port", port);
+		String driver=args[1];
 		SpringApplication.run(UdbApplication.class, args);
 	}
 }

@@ -1,5 +1,9 @@
 package com.udb.server.service;
 
+import java.io.File;
+import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
@@ -38,64 +42,20 @@ public class BaseService {
     }
 
     public static HikariDataSource initDataSource(JSONObject datasourceJson) {
+
+        System.out.println("initDataSource");
+        System.out.println(datasourceJson.toJSONString());
+
         String key = datasourceJson.getString("name") + ":" + datasourceJson.getString("database");
-        String type = datasourceJson.getString("type");
-        String driver = datasourceJson.getString("driver");
-        String host = datasourceJson.getString("host");
-        int port = datasourceJson.getIntValue("port");
         String username = datasourceJson.getString("username");
         String password = datasourceJson.getString("password");
-        String database = datasourceJson.getString("database");
-        String params = datasourceJson.getString("params");
-
-        if (type.equals("mysql")) {
-            if (driver == null || driver.length() < 10) {
-                driver = ("com.mysql.cj.jdbc.Driver");
-            }
-            if (database == null || database.length() == 0) {
-                database = ("mysql");
-            }
-        } else if (type.equals("oracle")) {
-            if (driver == null || driver.length() < 10) {
-                driver = ("oracle.jdbc.OracleDriver");
-            }
-            if (database == null || database.length() == 0) {
-                database = ("orcl");
-            }
-        } else if (type.equals("sqlserver")) {
-            if (driver == null || driver.length() < 10) {
-                driver = ("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-            }
-            if (database == null || database.length() == 0) {
-                database = ("master");
-            }
-        } else if (type.equals("postgresql")) {
-            if (driver == null || driver.length() < 10) {
-                driver = ("org.postgresql.Driver");
-            }
-            if (database == null || database.length() == 0) {
-                database = ("postgres");
-            }
-        }
-
-        StringBuffer url = new StringBuffer("jdbc:");
-        url.append(type);
-        url.append("://");
-        url.append(host).append(":");
-        url.append(port).append("/");
-        url.append(database);
-
-        String urlStr = url.toString();
-        if (params != null && params.length() > 0) {
-            urlStr = urlStr + "?" + params;
-        }
-        System.out.println(urlStr);
-
+        String jdbcUrl = datasourceJson.getString("driverJdbcUrl");
+        String driverMainClass = datasourceJson.getString("driverMainClass");
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl(urlStr);
+        config.setJdbcUrl(jdbcUrl);
         config.setUsername(username);
         config.setPassword(password);
-        config.setDriverClassName(driver);
+        config.setDriverClassName(driverMainClass);
         // set the connection to expire after 1000 minutes, and clean up expired
         // connections
         config.setMaxLifetime(1000 * 60);
@@ -103,6 +63,7 @@ public class BaseService {
         // set the minimum number of connections to 2
         config.setMaximumPoolSize(2);
         config.setConnectionTestQuery("SELECT 1");
+        
         config.setPoolName(key);
         HikariDataSource ds = new com.zaxxer.hikari.HikariDataSource(config);
         dataSourceMap = new java.util.HashMap<>();
