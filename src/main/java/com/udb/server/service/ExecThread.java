@@ -8,6 +8,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.udb.server.bodies.Result;
 import com.zaxxer.hikari.HikariDataSource;
@@ -241,6 +242,13 @@ public class ExecThread extends Thread {
                 Map<String, Object> row = new java.util.HashMap<>();
                 row.put("updateCount", updateCount);
                 rows.add(row);
+                Map<String, Object> column = new java.util.HashMap<>();
+                column.put("columnLable","updateCount");
+                column.put("columnTypeName", "updateCount");
+                column.put("columnName", "updateCount");
+                column.put("columnDisplaySize", 10);
+                column.put("columnType", 10);
+                columns.add(column);
             }
             stmt.close();
             Map<String, Object> result = new java.util.HashMap<>();
@@ -250,6 +258,7 @@ public class ExecThread extends Thread {
             result.put("sql", sql);
             result.put("status", "success");
             result.put("message", "Execute success");
+            System.out.println(JSON.toJSONString(result));
             results.put(result);
         } catch (Exception e) {
             // TODO: handle exception
