@@ -23,6 +23,8 @@ public class Result {
     private Date endTime;
     private String id;
     private String message;
+    private double progress;
+    
 
     public static Result success() {
         Result result = new Result(200);
@@ -67,6 +69,10 @@ public class Result {
         this.message = message;
         return this;
     }
+    public Result progress(double progress) {
+        this.progress = progress;
+        return this;
+    }
 
 
     public String getId() {
@@ -107,5 +113,11 @@ public class Result {
     }
     public void setMessage(String message) {
         this.message = message;
+    }
+    public double getProgress() {
+        return progress;
+    }
+    public void setProgress(double progress) {
+        this.progress = progress;
     }
 }

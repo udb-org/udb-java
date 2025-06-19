@@ -4,17 +4,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
-import com.udb.server.bodies.ExportDataBody;
-import com.udb.server.bodies.Result;
-import com.udb.server.bodies.TaskBody;
+
 import com.alibaba.fastjson2.JSON;
-import com.udb.server.bodies.DumpDatabaseBody;
-import com.udb.server.bodies.ExeSqlBody;
-import com.udb.server.service.BaseService;
 import com.udb.model.MysqlToCsvExporter;
 import com.udb.model.MysqlToJsonExporter;
 import com.udb.model.MysqlToSqlExporter;
 import com.udb.model.MysqlToXlsxExporter;
+import com.udb.server.bodies.ExeSqlBody;
+import com.udb.server.bodies.ExportDataBody;
+import com.udb.server.bodies.Result;
+import com.udb.server.service.BaseService;
 
 /**
  * The BaseController class is the controller of the application.
@@ -38,76 +37,9 @@ public class BaseController {
         try {
             return Result.success(BaseService.getDataSources());
         } catch (Exception e) {
-            //Get data source failed
+            // Get data source failed
             return Result.error(e.getMessage());
-        }       
-    }
-
-    /**
-     *
-     * Start executing SQL statements
-     * 
-     * @param body
-     * @return sessionId
-     */
-    @RequestMapping("/exec")
-    @ResponseBody
-    public Result exec(@RequestBody ExeSqlBody body) {
-        return BaseService.exec(body);
-    }
-
-    /**
-     *
-     * Get the result of a task
-     * 
-     */
-    @RequestMapping("/getResult")
-    @ResponseBody
-    public Result getResult(@RequestBody TaskBody body) {
-        return BaseService.getResult(body.getId());
-
-    }
-
-    /**
-     * Stop a task
-     */
-    @RequestMapping("/stop")
-    @ResponseBody
-    public Result stop(@RequestBody TaskBody body) {
-        return BaseService.stop(body.getId());
-    }
-
-    /**
-     * Commit a transaction
-     * 
-     * @param id
-     * @return
-     */
-    @RequestMapping("/commit")
-    @ResponseBody
-    public Result commit(@RequestBody TaskBody body) {
-        return BaseService.commit(body.getId());
-    }
-
-    /**
-     * Rollback a transaction
-     * 
-     * @param id
-     * @return
-     */
-    @RequestMapping("/rollback")
-    @ResponseBody
-    public Result rollback(@RequestBody TaskBody body) {
-        return BaseService.rollback(body.getId());
-    }
-
-    /**
-     * Get all tasks
-     */
-    @RequestMapping("/getTasks")
-    @ResponseBody
-    public Result getTasks() {
-        return BaseService.getTasks();
+        }
     }
 
     /**
@@ -146,27 +78,4 @@ public class BaseController {
             return Result.error(e.getMessage());
         }
     }
-
-    @RequestMapping("/dump")
-    @ResponseBody
-    public Result dumpDatabase(@RequestBody DumpDatabaseBody body) {
-        System.out.println(JSON.toJSONString(body));
-        try {
-            return BaseService.dumpDatabase(body.getDatasource(), body.getPath(), body.getTables(), body.getDumpType());
-           
-        } catch (Exception e) {
-            return Result.error(e.getMessage());
-        }
-    }
-    @RequestMapping("/dump_stop")
-    @ResponseBody
-    public Result stopDump(@RequestBody TaskBody body) {
-        return BaseService.stopDump(body.getId());
-    }
-    @ResponseBody
-    @RequestMapping("/dump_result")
-    public Result getDumpResult(@RequestBody TaskBody body) {
-        return BaseService.getDumpResult(body.getId());
-    }
-
 }

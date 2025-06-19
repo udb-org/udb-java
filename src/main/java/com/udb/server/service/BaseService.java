@@ -1,17 +1,10 @@
 package com.udb.server.service;
 
-import java.io.File;
-import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.udb.server.bodies.ExeSqlBody;
 import com.udb.server.bodies.Result;
@@ -63,7 +56,7 @@ public class BaseService {
         // set the minimum number of connections to 2
         config.setMaximumPoolSize(2);
         config.setConnectionTestQuery("SELECT 1");
-        
+
         config.setPoolName(key);
         HikariDataSource ds = new com.zaxxer.hikari.HikariDataSource(config);
         dataSourceMap = new java.util.HashMap<>();
@@ -107,160 +100,6 @@ public class BaseService {
         } else {
             return initDataSource(datasourceJson);
         }
-    }
-
-    // The map stores the execution tasks
-    private static Map<String, ExecThread> threadPoolTaskMap = new java.util.HashMap<>();
-
-    /**
-     * This method executes SQL statements.
-     * It returns a JSON object that contains the execution status, start time, end
-     * time, and results.
-     * 
-     * @param body
-     * @return id
-     */
-
-    public static Result exec(ExeSqlBody body) {
-        // If the number of tasks is greater than 10, return an error message
-        if (threadPoolTaskMap.size() >= 10) {
-            return new Result(100).message("Too many tasks");
-        }
-        String id = UUID.randomUUID().toString();
-        ExecThread thread = new ExecThread(id, body.getSql(), body.getDatasource(), body.isTransaction());
-        threadPoolTaskMap.put(id, thread);
-        thread.start();
-        return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
-    }
-
-    /**
-     * This method returns a list of tasks.
-     * 
-     * @return
-     */
-    public static Result getTasks() {
-        JSONArray tasks = new JSONArray();
-        for (Map.Entry<String, ExecThread> entry : threadPoolTaskMap.entrySet()) {
-            JSONObject task = new JSONObject();
-            task.put("id", entry.getKey());
-            task.put("startTime", entry.getValue().getStartTime());
-            task.put("status", entry.getValue().getStatus());
-            task.put("endTime", entry.getValue().getEndTime());
-            task.put("errorMessage", entry.getValue().getErrorMessage());
-            task.put("lable", entry.getValue().getLable());
-            tasks.add(task);
-        }
-        return Result.success(tasks);
-    }
-
-    /**
-     * This method returns the result of a task.
-     * It returns a JSON object that contains the execution status, start time, end
-     * time, and results.
-     * 
-     * @param id
-     * @return
-     */
-    public static Result getResult(String id) {
-        ExecThread thread = threadPoolTaskMap.get(id);
-        if (thread == null) {
-            return new Result(820).message("Task does not exist");
-        }
-        // Add the results
-        String results = "[";
-        if (thread.getResults() != null && thread.getResults().size() > 0) {
-            while (thread.getResults().size() > 0) {
-                Map<String, Object> result = thread.getResults().poll();
-                results += JSON.toJSONString(result) + ",";
-            }
-        }
-        if (results.length() > 1) {
-            results = results.substring(0, results.length() - 1);
-        }
-        results += "]";
-
-        // Add the error message
-        if (thread.getEndTime() == null) {
-
-            return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
-        } else {
-            Result rs = Result.success().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime())
-                    .id(id);
-            if (thread.getStatus() != 200) {
-                rs.setStatus(thread.getStatus());
-                rs.setMessage(thread.getErrorMessage());
-            }
-            if (!thread.isTransaction() || thread.isCommitOrRollback()) {
-                // Close the connection
-                thread.end();
-                threadPoolTaskMap.remove(id);
-            }
-            return rs;
-        }
-    }
-
-    /**
-     * This method stops a task.
-     * 
-     * @param id
-     * @return
-     */
-    public static Result stop(String id) {
-        ExecThread thread = threadPoolTaskMap.get(id);
-        if (thread == null) {
-            return new Result(820).message("Task does not exist");
-        }
-        return thread.end();
-    }
-
-    /**
-     * This method commits a task.
-     * 
-     * @param id
-     * @return
-     */
-    public static Result commit(String id) {
-        ExecThread thread = threadPoolTaskMap.get(id);
-        if (thread == null) {
-
-            return new Result(820).message("Task does not exist");
-        }
-        try {
-            thread.commit();
-            thread.end();
-            threadPoolTaskMap.remove(id);
-
-            return Result.success().id(id).message("Commit success");
-        } catch (Exception e) {
-
-            return Result.error(e.getMessage()).id(id);
-        }
-
-    }
-
-    /**
-     * This method rolls back a task.
-     *
-     * @param id
-     * @return
-     */
-    public static Result rollback(String id) {
-        ExecThread thread = threadPoolTaskMap.get(id);
-        if (thread == null) {
-
-            return new Result(820).message("Task does not exist");
-        }
-        try {
-            thread.rollback();
-            thread.end();
-            threadPoolTaskMap.remove(id);
-
-            return Result.success().id(id).message("Rollback success");
-        } catch (Exception e) {
-
-            return Result.error(e.getMessage()).id(id);
-        }
-
     }
 
     /**
@@ -333,55 +172,4 @@ public class BaseService {
 
     }
 
-    private static Map<String, DumpThread> dumpThreadMap = new java.util.HashMap<>();
-
-    public static Result dumpDatabase(String datasource, String path, String tables, String dumpType) throws Exception {
-        String key = UUID.randomUUID().toString();
-        if (dumpThreadMap.containsKey(key)) {
-            return new Result(840).message("Dump is running");
-        }
-        DumpThread thread = new DumpThread(key, tables, dumpType, path, datasource);
-        dumpThreadMap.put(key, thread);
-        thread.start();
-        return Result.running().id(key).startTime(thread.getStartTime()).message("Dumping");
-    }
-
-    public static Result getDumpResult(String id) {
-        DumpThread thread = dumpThreadMap.get(id);
-        if (thread == null) {
-
-            return new Result(820).message("Task does not exist");
-        }
-        // Add the results
-        String results = "[";
-        if (thread.getResults() != null && thread.getResults().size() > 0) {
-            while (thread.getResults().size() > 0) {
-                String result = thread.getResults().poll();
-                results += "\"" + result + "\",";
-            }
-        }
-        results += "]";
-
-        // Add the error message
-        if (thread.getEndTime() == null) {
-            return Result.running().id(id).startTime(thread.getStartTime()).endTime(thread.getEndTime());
-        } else {
-            Result rs = Result.success().data(results).startTime(thread.getStartTime()).endTime(thread.getEndTime())
-                    .id(id);
-            if (thread.getStatus() != 200) {
-                rs.setStatus(thread.getStatus());
-            }
-            thread.end();
-            dumpThreadMap.remove(id);
-            return rs;
-        }
-    }
-
-    public static Result stopDump(String id) {
-        DumpThread thread = dumpThreadMap.get(id);
-        if (thread == null) {
-            return new Result(820).message("Task does not exist");
-        }
-        return thread.end();
-    }
 }
